@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 
-const generateHaiku = require("./haiku");
+const getPoem = require("./getPoem");
 const server = express();
 
 const PORT = 8686 || process.env.PORT;
@@ -20,7 +20,7 @@ server.use(bodyParser.json());
 let orderBegun = false;
 let storedSize = "";
 
-server.post("/sms", (req, res) => {
+server.post("/sms", async (req, res) => {
   const twiml = new MessagingResponse();
 
   if (Object.keys(req.body).length === 0) {
@@ -36,7 +36,7 @@ server.post("/sms", (req, res) => {
   };
   const unrecognizedMessage = () => {
     twiml.message(
-      'Unrecognized message. Please send "MOCHA" or "HAIKU" to get started!'
+      'Unrecognized message. Please send "MOCHA" or "POEM" to get started!'
     );
   };
 
@@ -49,7 +49,7 @@ server.post("/sms", (req, res) => {
     twiml.message(
       `There is not enough money left in your balance for a${
         sizeText ? " " + expandedSize[sizeText].toLowerCase() : ""
-      } mocha! You can always request a haiku with "HAIKU", though!`
+      } mocha! You can always request a haiku with "POEM", though!`
     );
     endMessageChain();
   };
@@ -59,7 +59,7 @@ server.post("/sms", (req, res) => {
     balance = roundOut(balance - mochaPrices[sizeText]);
 
     twiml.message(
-      `${expandedSize[sizeText]} mocha ordered. Remaining balance: $${balance}. Now for some poetry to enjoy it with, just send "HAIKU"!`
+      `${expandedSize[sizeText]} mocha ordered. Remaining balance: $${balance}. Now for some poetry to enjoy it with, just send "POEM"!`
     );
 
     twilioClient.messages.create({
@@ -111,8 +111,6 @@ server.post("/sms", (req, res) => {
         )
       );
     }
-  } else if (incomingText === "HAIKU") {
-    twiml.message(generateHaiku().join(" / "));
   } else if (incomingText === "Y") {
     if (orderBegun) {
       checkBalance(storedSize, insufficientFunds, orderMocha);
@@ -122,12 +120,15 @@ server.post("/sms", (req, res) => {
   } else if (incomingText === "N") {
     if (orderBegun) {
       twiml.message(
-        'Ok, no mocha ordered. A "HAIKU" is always available, though!'
+        'Ok, no mocha ordered. A "POEM" is always available, though!'
       );
       endMessageChain();
     } else {
       unrecognizedMessage();
     }
+  } else if (incomingText === "POEM") {
+    const poem = await getPoem();
+    twiml.message(poem);
   } else {
     unrecognizedMessage();
   }
