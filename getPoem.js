@@ -1,17 +1,29 @@
 const axios = require("axios");
 
 const getPoem = async () => {
-  let response;
-  try {
-    response = await axios.get("https://poetrydb.org/random");
-  } catch (error) {
-    console.log(`Error occurred, poem not retrieved: `, error);
+  let data;
+
+  // Request poems 100 at a time and search for poems with less than 30 lines
+  while (true) {
+    const response = await axios.get("https://poetrydb.org/random/10");
+
+    let chosenPoem = {};
+    for (let poem of response.data) {
+      if (poem.linecount <= 30) {
+        chosenPoem = poem;
+        break;
+      }
+    }
+
+    if (Object.keys(chosenPoem) !== 0) {
+      data = chosenPoem;
+      break;
+    }
   }
 
-  const { author, title, lines } = response.data;
-
-  const formattedLines = lines.join("\n");
-  const formattedPoem = `\n${title}\nBy ${author}\n\n${formattedLines}`;
+  const formattedPoem = `\n${data.title}\nBy ${
+    data.author
+  }\n\n${data.lines.join("\n")}`;
 
   return formattedPoem;
 };
